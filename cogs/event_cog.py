@@ -171,9 +171,20 @@ class EventCog(commands.Cog):
             attendees = [u.mention for u in users]
 
             if len(attendees) < answers["__min_attendees__"]:
-                await announcement_channel.send("❌ Minimum attendees not met, event cancelled.")
-                await pre_msg.delete()
-                await countdown_msg.delete()
+                cancel_msg = await announcement_channel.send("❌ Minimum attendees not met, event cancelled.")
+
+                with contextlib.suppress(Exception):
+                    await pre_msg.delete()
+                    await countdown_msg.delete()
+
+                # Clean stored state
+                self.active_events.pop(guild_id, None)
+
+                # Delete cancel message after a delay (optional)
+                await asyncio.sleep(30)
+                with contextlib.suppress(Exception):
+                    await cancel_msg.delete()
+
                 return
         except Exception:
             await announcement_channel.send("❌ Error fetching attendee reactions. Event cancelled.")
