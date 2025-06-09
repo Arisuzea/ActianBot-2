@@ -132,6 +132,15 @@ class EventCog(commands.Cog):
             val = await self.ask_input(input_channel, ctx.author, f"Enter **{field.capitalize()}**:", validate=validate_nonempty, error_msg=f"{field.capitalize()} cannot be empty.")
             if val is None: return
             answers[field] = val
+        
+        def validate_min_attendees(content):
+            return (content.isdigit() and int(content) >= 0, int(content) if content.isdigit() and int(content) >= 0 else None)
+
+        min_attendees = await self.ask_input(input_channel, ctx.author, "Enter **Minimum Attendees** (0 or more):", validate_min_attendees, "Enter a valid non-negative number.")
+        if min_attendees is None:
+            return
+        answers["__min_attendees__"] = min_attendees
+
 
         filled = FORM_TEMPLATE.format(**answers)
         form_msg = await input_channel.send(f"Here’s your filled form:\n{filled}")
@@ -160,8 +169,18 @@ class EventCog(commands.Cog):
             reaction = discord.utils.get(pre_msg.reactions, emoji="✅")
             users = [u async for u in reaction.users() if not u.bot] if reaction else []
             attendees = [u.mention for u in users]
+
+            if len(attendees) < answers["__min_attendees__"]:
+                await announcement_channel.send("❌ Minimum attendees not met, event cancelled.")
+                await pre_msg.delete()
+                await countdown_msg.delete()
+                return
         except Exception:
-            attendees = []
+            await announcement_channel.send("❌ Error fetching attendee reactions. Event cancelled.")
+            await pre_msg.delete()
+            await countdown_msg.delete()
+            return
+
 
         await pre_msg.delete()
 
@@ -188,7 +207,10 @@ class EventCog(commands.Cog):
     async def eventend(self, ctx):
         guild_id = ctx.guild.id
         if guild_id not in self.active_events:
-            return await ctx.send("There is no active event to end.", delete_after=10)
+            await ctx.send("There is no active event to end.", delete_after=10)
+            with contextlib.suppress(discord.Forbidden, discord.NotFound):
+                await ctx.message.delete()
+            return
 
         data = self.active_events[guild_id]
         input_channel = self.bot.get_channel(data["input_channel_id"])
@@ -209,8 +231,16 @@ class EventCog(commands.Cog):
                         msg = await announcement_channel.fetch_message(msg_id)
                         await msg.delete()
 
-            await ctx.send(f"Event ended and cleaned in {input_channel.mention} / {announcement_channel.mention}.", delete_after=10)
+            await ctx.send(
+                f"Event ended and cleaned in {input_channel.mention} / {announcement_channel.mention}.",
+                delete_after=10
+            )
             del self.active_events[guild_id]
 
         except Exception as e:
             await ctx.send(f"Error ending event: {e}", delete_after=10)
+
+        # Delete the user's command message
+        with contextlib.suppress(discord.Forbidden, discord.NotFound):
+            await ctx.message.delete()
+
