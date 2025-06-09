@@ -115,7 +115,7 @@ class EventCog(commands.Cog):
         answers["event"] = await self.ask_input(input_channel, ctx.author, "Enter **Event**:", validate_nonempty, "Event name cannot be empty.")
         if answers["event"] is None: return
 
-        ts = await self.ask_input(input_channel, ctx.author, "Enter **Time** (use timestamp format, e.g. <t:1234567890:R>):", validate_timestamp, "Invalid format. Use <t:...:...> timestamp.")
+        ts = await self.ask_input(input_channel, ctx.author, "Enter **Time** (This accepts a timestamp only, generate a timestamp here: [**CLICK ME!**](https://discordtimestamp.com)):", validate_timestamp, "Invalid format. Use <t:...:...> timestamp.")
         if ts is None: return
         answers["time"] = f"<t:{ts}:R>"
         answers["__ts__"] = ts
