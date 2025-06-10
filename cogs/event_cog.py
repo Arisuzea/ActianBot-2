@@ -52,11 +52,13 @@ class EventCog(commands.Cog):
         return None
 
     @commands.command()
+    @commands.has_role("RP Event Host")
     async def setchannel(self, ctx, channel: discord.TextChannel):
         self.input_channels[ctx.guild.id] = channel.id
         await ctx.send(f"Input channel set to {channel.mention}", delete_after=10)
 
     @commands.command()
+    @commands.has_role("RP Event Host")
     async def event(self, ctx):
         guild_id = ctx.guild.id
         if guild_id not in self.input_channels:
@@ -183,6 +185,7 @@ class EventCog(commands.Cog):
         await countdown_msg.delete()
 
     @commands.command()
+    @commands.has_role("RP Event Host")
     async def eventend(self, ctx):
         guild_id = ctx.guild.id
         if guild_id not in self.active_events:
