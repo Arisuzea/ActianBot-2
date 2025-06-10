@@ -139,7 +139,7 @@ class EventCog(commands.Cog):
         min_attendees = await self.ask_input(input_channel, ctx.author, "Enter **Minimum Attendees**:", validate_min_attendees, "Enter a valid non-negative number.")
         if min_attendees is None:
             return
-        answers["__min_attendees__"] = min_attendees
+        answers["__min_attendees__"] = str(min_attendees)
 
 
         filled = FORM_TEMPLATE.format(**answers)
