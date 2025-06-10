@@ -115,7 +115,7 @@ class EventCog(commands.Cog):
         answers["event"] = await self.ask_input(input_channel, ctx.author, "Enter **Event**:", validate_nonempty, "Event name cannot be empty.")
         if answers["event"] is None: return
 
-        ts = await self.ask_input(input_channel, ctx.author, "Enter **Time** ((This accepts a timestamp only, generate a timestamp here: [**CLICK ME!**](https://discordtimestamp.com)):", validate_timestamp, "Invalid format. Use this [**CLICK ME**](https://discordtimestamp.com) to generate a timestamp.")
+        ts = await self.ask_input(input_channel, ctx.author, "Enter **Time**  (This accepts a timestamp only, generate a timestamp here: [**CLICK ME!**](https://discordtimestamp.com)):", validate_timestamp, "Invalid format. Use <t:...:...> timestamp.")
         if ts is None: return
         answers["time"] = f"<t:{ts}:R>"
         answers["__ts__"] = ts
@@ -128,19 +128,10 @@ class EventCog(commands.Cog):
         if not all(k in answers for k in ("region", "province", "settlement")):
             return await input_channel.send("Location selection incomplete. Setup cancelled.", delete_after=10)
 
-        for field in ["site", "In-game area", "link"]:
+        for field in ["site", "area", "link"]:
             val = await self.ask_input(input_channel, ctx.author, f"Enter **{field.capitalize()}**:", validate=validate_nonempty, error_msg=f"{field.capitalize()} cannot be empty.")
             if val is None: return
             answers[field] = val
-        
-        def validate_min_attendees(content):
-            return (content.isdigit() and int(content) >= 0, int(content) if content.isdigit() and int(content) >= 0 else None)
-
-        min_attendees = await self.ask_input(input_channel, ctx.author, "Enter **Minimum Attendees**:", validate_min_attendees, "Enter a valid non-negative number.")
-        if min_attendees is None:
-            return
-        answers["__min_attendees__"] = str(min_attendees)
-
 
         filled = FORM_TEMPLATE.format(**answers)
         form_msg = await input_channel.send(f"Here’s your filled form:\n{filled}")
@@ -169,29 +160,8 @@ class EventCog(commands.Cog):
             reaction = discord.utils.get(pre_msg.reactions, emoji="✅")
             users = [u async for u in reaction.users() if not u.bot] if reaction else []
             attendees = [u.mention for u in users]
-
-            if len(attendees) < answers["__min_attendees__"]:
-                cancel_msg = await announcement_channel.send("❌ Minimum attendees not met, event cancelled.")
-
-                with contextlib.suppress(Exception):
-                    await pre_msg.delete()
-                    await countdown_msg.delete()
-
-                # Clean stored state
-                self.active_events.pop(guild_id, None)
-
-                # Delete cancel message after a delay (optional)
-                await asyncio.sleep(30)
-                with contextlib.suppress(Exception):
-                    await cancel_msg.delete()
-
-                return
         except Exception:
-            await announcement_channel.send("❌ Error fetching attendee reactions. Event cancelled.")
-            await pre_msg.delete()
-            await countdown_msg.delete()
-            return
-
+            attendees = []
 
         await pre_msg.delete()
 
@@ -254,3 +224,4 @@ class EventCog(commands.Cog):
         # Delete the user's command message
         with contextlib.suppress(discord.Forbidden, discord.NotFound):
             await ctx.message.delete()
+
